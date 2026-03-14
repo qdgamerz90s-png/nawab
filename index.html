@@ -1,50 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auto Commentary App</title>
-<style>
-body { font-family: Arial, sans-serif; background:#f4f4f4; padding:20px; }
-h1 { text-align:center; color:#333; }
-.container { max-width:700px; margin:0 auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
-label { display:block; margin-top:10px; font-weight:bold; }
-input, select { width:100%; padding:8px; margin-top:5px; border-radius:5px; border:1px solid #ccc; }
-button { padding:10px 20px; margin-top:20px; width:48%; border:none; border-radius:5px; cursor:pointer; }
-button#start { background:#4CAF50; color:#fff; }
-button#stop { background:#f44336; color:#fff; }
-.commentary-box { margin-top:20px; padding:10px; background:#eee; border-radius:5px; height:300px; overflow-y:auto; }
-</style>
-</head>
-<body>
-
-<div class="container">
-<h1>Auto Football Commentary App</h1>
-
-<label>Team A Name</label>
-<input type="text" id="teamA" placeholder="Enter Team A Name">
-
-<label>Team B Name</label>
-<input type="text" id="teamB" placeholder="Enter Team B Name">
-
-<label>League Name</label>
-<input type="text" id="league" placeholder="Enter League Name">
-
-<label>Commentary Speed</label>
-<select id="speed">
-<option value="3000">Slow</option>
-<option value="2000" selected>Medium</option>
-<option value="1000">Fast</option>
-</select>
-
-<button id="start">Start Commentary</button>
-<button id="stop">Stop Commentary</button>
-
-<div class="commentary-box" id="commentaryBox"></div>
-</div>
-
 <script>
-// Football commentary pool (example 100 lines, expandable to 500+)
 const commentaryPool = [
 "An incredible start from [TeamA] in the [League]!",
 "[TeamB] is pushing forward with full force.",
@@ -55,98 +9,119 @@ const commentaryPool = [
 "The crowd is going wild for [TeamA]!",
 "Can [TeamB] turn the game around?",
 "Absolute brilliance by [TeamA] on the attack.",
-"A tense moment in the [League] match.",
-"[TeamB] pressing high up the pitch.",
-"Brilliant strategy by [TeamA]'s coach.",
-"Unbelievable finish from [TeamB]!",
-"Goal-line clearance from [TeamA]!",
-"[TeamB] showing incredible skill on the ball.",
-"Amazing cross from [TeamA]!",
-"[TeamB]'s midfielder controlling the game.",
-"Stunning long-range shot by [TeamA]!",
-"[TeamB] struggling to maintain possession.",
-"Quick counter-attack by [TeamA]!"
-// Add more lines as needed up to 500
+"A tense moment in the [League] match."
 ];
 
-// TTS & commentary logic
 let commentaryInterval;
 let commentaryQueue = [];
 let isSpeaking = false;
-let speech = window.speechSynthesis;
 
-// Generate a random commentary line
-function generateCommentary(teamA, teamB, league) {
-    const line = commentaryPool[Math.floor(Math.random() * commentaryPool.length)];
+const speech = window.speechSynthesis;
+let voices = [];
+
+// Load voices (important for mobile)
+function loadVoices(){
+    voices = speech.getVoices();
+}
+
+speech.onvoiceschanged = loadVoices;
+
+function generateCommentary(teamA, teamB, league){
+    const line = commentaryPool[Math.floor(Math.random()*commentaryPool.length)];
+
     return line.replace(/\[TeamA\]/g, teamA)
                .replace(/\[TeamB\]/g, teamB)
                .replace(/\[League\]/g, league);
 }
 
-// Speak next line in queue
-function speakNext() {
-    if(commentaryQueue.length === 0) {
+function speakNext(){
+
+    if(commentaryQueue.length === 0){
         isSpeaking = false;
         return;
     }
+
     isSpeaking = true;
-    const line = commentaryQueue.shift();
-    const utter = new SpeechSynthesisUtterance(line);
-    utter.lang = 'en-US';
-    utter.onend = speakNext;
+
+    const text = commentaryQueue.shift();
+
+    const utter = new SpeechSynthesisUtterance(text);
+
+    utter.lang = "en-US";
+
+    if(voices.length > 0){
+        utter.voice = voices[0];
+    }
+
+    utter.rate = 1;
+    utter.pitch = 1;
+
+    utter.onend = function(){
+        speakNext();
+    };
+
     speech.speak(utter);
 }
 
-// Start commentary
-function startCommentary() {
-    const teamA = document.getElementById('teamA').value || "Team A";
-    const teamB = document.getElementById('teamB').value || "Team B";
-    const league = document.getElementById('league').value || "League";
-    const speed = parseInt(document.getElementById('speed').value);
+function startCommentary(){
 
-    // Optional: clear previous commentary
-    document.getElementById('commentaryBox').innerHTML = '';
+    const teamA = document.getElementById("teamA").value || "Team A";
+    const teamB = document.getElementById("teamB").value || "Team B";
+    const league = document.getElementById("league").value || "League";
 
-    // Prevent multiple intervals
+    const speed = parseInt(document.getElementById("speed").value);
+
+    const box = document.getElementById("commentaryBox");
+
     if(commentaryInterval) return;
 
-    // Generate first line immediately
     const firstLine = generateCommentary(teamA, teamB, league);
-    commentaryQueue.push(firstLine);
-    const box = document.getElementById('commentaryBox');
-    const p = document.createElement('p');
-    p.textContent = firstLine;
-    box.appendChild(p);
-    box.scrollTop = box.scrollHeight;
-    if(!isSpeaking) speakNext();
 
-    // Continue lines at interval
-    commentaryInterval = setInterval(() => {
-        const line = generateCommentary(teamA, teamB, league);
+    commentaryQueue.push(firstLine);
+
+    const p = document.createElement("p");
+    p.textContent = firstLine;
+
+    box.appendChild(p);
+
+    if(!isSpeaking){
+        speakNext();
+    }
+
+    commentaryInterval = setInterval(()=>{
+
+        const line = generateCommentary(teamA,teamB,league);
+
         commentaryQueue.push(line);
 
-        const p = document.createElement('p');
+        const p = document.createElement("p");
+
         p.textContent = line;
+
         box.appendChild(p);
+
         box.scrollTop = box.scrollHeight;
 
-        if(!isSpeaking) speakNext();
-    }, speed);
+        if(!isSpeaking){
+            speakNext();
+        }
+
+    },speed);
 }
 
-// Stop commentary
-function stopCommentary() {
+function stopCommentary(){
+
     clearInterval(commentaryInterval);
+
     commentaryInterval = null;
+
     speech.cancel();
+
     commentaryQueue = [];
+
     isSpeaking = false;
 }
 
-// Event listeners
-document.getElementById('start').addEventListener('click', startCommentary);
-document.getElementById('stop').addEventListener('click', stopCommentary);
+document.getElementById("start").addEventListener("click", startCommentary);
+document.getElementById("stop").addEventListener("click", stopCommentary);
 </script>
-
-</body>
-</html>

@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auto Football Commentary</title>
+
+<title>AI Football Commentary</title>
 
 <style>
 
 body{
 font-family:Arial;
-background:#f4f4f4;
+background:#f0f2f5;
 padding:20px;
 }
 
@@ -19,7 +20,7 @@ margin:auto;
 background:white;
 padding:20px;
 border-radius:10px;
-box-shadow:0 0 10px rgba(0,0,0,0.1);
+box-shadow:0 0 10px rgba(0,0,0,0.15);
 }
 
 h1{
@@ -27,8 +28,8 @@ text-align:center;
 }
 
 label{
-display:block;
 margin-top:10px;
+display:block;
 font-weight:bold;
 }
 
@@ -43,7 +44,7 @@ border:1px solid #ccc;
 button{
 width:48%;
 padding:12px;
-margin-top:15px;
+margin-top:20px;
 border:none;
 border-radius:6px;
 font-size:16px;
@@ -62,11 +63,15 @@ color:white;
 
 .commentary{
 margin-top:20px;
-height:300px;
+height:320px;
 overflow-y:auto;
 background:#eee;
 padding:10px;
 border-radius:6px;
+}
+
+p{
+margin:5px 0;
 }
 
 </style>
@@ -87,7 +92,7 @@ border-radius:6px;
 <label>League</label>
 <input id="league" placeholder="League">
 
-<label>Speed</label>
+<label>Commentary Speed</label>
 <select id="speed">
 <option value="4000">Slow</option>
 <option value="2500" selected>Medium</option>
@@ -103,71 +108,94 @@ border-radius:6px;
 
 <script>
 
-let interval=null
+let voices=[]
+let commentaryInterval=null
+let lastLine=""
 
-const pool=[
+const commentaryPool=[
 
-"An amazing start by [A] in the [L]!",
-"[B] moving the ball forward.",
-"Great passing from [A].",
-"[B] defending very well.",
-"The crowd is cheering loudly.",
-"[A] attacking from the wing.",
-"[B] trying to counter attack.",
-"What a fantastic move by [A]!",
+"A great start in the [L]!",
+"[A] moving forward confidently.",
+"[B] defending strongly.",
+"What a brilliant pass from [A]!",
+"[B] trying to build an attack.",
+"The crowd is loving this match!",
+"[A] attacking down the wing.",
 "[B] wins the ball back.",
-"[A] building pressure now.",
-"A dangerous moment in the [L].",
+"A fantastic move from [A]!",
+"[B] attempts a dangerous shot.",
+"[A] controlling possession.",
 "[B] pushing higher up the field.",
-"Great teamwork from [A].",
-"[B] looking for a chance.",
-"Brilliant control by [A].",
-"[B] attempting a long shot!",
-"What a pass from [A]!",
-"[B] nearly scores!",
-"Fantastic save!",
-"The match is getting intense!"
+"The pressure is building!",
+"[A] nearly scores!",
+"[B] clears the danger.",
+"What a save by the goalkeeper!",
+"[A] creating another chance.",
+"[B] struggling to keep possession.",
+"A tense moment in the match.",
+"The fans are roaring in the stadium!"
 
 ]
 
-function line(a,b,l){
+function loadVoices(){
+voices = speechSynthesis.getVoices()
+}
 
-let t=pool[Math.floor(Math.random()*pool.length)]
+speechSynthesis.onvoiceschanged = loadVoices
 
-return t.replace(/\[A\]/g,a)
+function speak(text){
+
+let utter = new SpeechSynthesisUtterance(text)
+
+utter.lang="en-US"
+
+if(voices.length>0){
+utter.voice = voices[0]
+}
+
+utter.rate=1
+utter.pitch=1
+
+speechSynthesis.cancel()
+speechSynthesis.speak(utter)
+
+}
+
+function generateCommentary(a,b,l){
+
+let line
+
+do{
+line=commentaryPool[Math.floor(Math.random()*commentaryPool.length)]
+}while(line===lastLine)
+
+lastLine=line
+
+return line
+.replace(/\[A\]/g,a)
 .replace(/\[B\]/g,b)
 .replace(/\[L\]/g,l)
 
 }
 
-function speak(text){
+function startCommentary(){
 
-let u=new SpeechSynthesisUtterance(text)
+if(commentaryInterval) return
 
-u.lang="en-US"
+let a=document.getElementById("teamA").value || "Team A"
+let b=document.getElementById("teamB").value || "Team B"
+let l=document.getElementById("league").value || "League"
 
-u.rate=1
-u.pitch=1
-
-speechSynthesis.cancel()   // mobile fix
-speechSynthesis.speak(u)
-
-}
-
-function start(){
-
-if(interval) return
-
-let a=document.getElementById("teamA").value||"Team A"
-let b=document.getElementById("teamB").value||"Team B"
-let l=document.getElementById("league").value||"League"
 let speed=parseInt(document.getElementById("speed").value)
 
 let box=document.getElementById("box")
 
-interval=setInterval(()=>{
+// mobile audio unlock
+speechSynthesis.speak(new SpeechSynthesisUtterance("Match starting"))
 
-let text=line(a,b,l)
+commentaryInterval=setInterval(()=>{
+
+let text=generateCommentary(a,b,l)
 
 let p=document.createElement("p")
 p.textContent=text
@@ -182,18 +210,18 @@ speak(text)
 
 }
 
-function stop(){
+function stopCommentary(){
 
-clearInterval(interval)
+clearInterval(commentaryInterval)
 
-interval=null
+commentaryInterval=null
 
 speechSynthesis.cancel()
 
 }
 
-document.getElementById("start").onclick=start
-document.getElementById("stop").onclick=stop
+document.getElementById("start").addEventListener("click",startCommentary)
+document.getElementById("stop").addEventListener("click",stopCommentary)
 
 </script>
 
